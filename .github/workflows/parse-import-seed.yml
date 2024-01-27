@@ -3,7 +3,10 @@ name: parse-import-seed build and deploy
 on:
   push:
     branches:
-      - main  # Set this to your default branch
+      - main
+
+env:
+  DEPLOY_BRANCH: parse-import-seed-compiled
 
 jobs:
   build-and-deploy:
@@ -16,7 +19,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v1
       with:
-        node-version: '18'  # Set this to your Node.js version
+        node-version: '18'
 
     - name: Install Dependencies
       run: npm install
@@ -25,7 +28,17 @@ jobs:
       run: npx tsc
 
     - name: Deploy to GitHub Pages
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        branch: parse-import-seed-compiled  # The branch the action should deploy to.
-        folder: dist      # The folder the action should deploy.
+      run: |
+        git config --global user.name 'auto-publish'
+        git config --global user.email 'auto-publish@nabu.io'
+        git fetch
+        if git rev-parse --verify --quiet ${{ env.DEPLOY_BRANCH }}; then
+          git checkout ${{ env.DEPLOY_BRANCH }}
+        else
+          git checkout -b ${{ env.DEPLOY_BRANCH }}
+        fi
+        git add -f dist
+        git commit -m "Auto-publish to GitHub Pages"
+        git push origin ${{ env.DEPLOY_BRANCH }} --force
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

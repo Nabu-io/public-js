@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/validator": "^13.11.8",
     "typescript": "^5.3.3"
   },
   "dependencies": {

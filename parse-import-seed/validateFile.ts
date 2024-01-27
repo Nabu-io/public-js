@@ -88,9 +88,9 @@ function validateSheet(worksheet: ExcelJS.Worksheet, expectedColumns: string[]) 
 }
 
 
-export default function validateExcelFile(file: File): Promise<any> {
+export default function validateExcelFile(arrayBuffer: ArrayBuffer): Promise<any> {
     const workbook = new ExcelJS.Workbook();
-    return workbook.xlsx.load(file)
+    return workbook.xlsx.load(arrayBuffer)
         .then(() => {
 
             for (let sheetName of workbook.worksheets.map(w => w.name.trim())) {

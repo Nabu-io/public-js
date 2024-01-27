@@ -1,8 +1,8 @@
 
-import ExcelJS, { CellHyperlinkValue } from 'exceljs'
-import * as types from "./types";
-import { validateEmail, validatePassword } from './validationHelpers'; // ok
+import { CellHyperlinkValue } from 'exceljs'
 import Validator from 'validator' // library
+import { validateEmail, validatePassword } from './validationHelpers'; // ok
+import * as types from "./types";
 
 
 export function processWorkbook(workbook: any) {
@@ -12,7 +12,7 @@ export function processWorkbook(workbook: any) {
     const mapGroupNameToGroupId = new Map()
     let groupsData: any[] = []
 
-    organizationWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    organizationWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const groupName = row.getCell(1).value?.toString().trim()
             const groupType = row.getCell(2).value?.toString().trim()
@@ -55,7 +55,7 @@ export function processWorkbook(workbook: any) {
     const usersWorksheet = workbook.getWorksheet('Users')
     const usersData: any[] = []
 
-    usersWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    usersWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const email = (row.getCell(1).value as CellHyperlinkValue).text.trim()
             const role = row.getCell(2).value?.toString().trim()
@@ -130,7 +130,7 @@ export function processWorkbook(workbook: any) {
 
     const companyRegistrationNumbersWorksheet = workbook.getWorksheet('Company Registration Numbers')
     const companyRegistrationsData: any[] = []
-    companyRegistrationNumbersWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    companyRegistrationNumbersWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const value = row.getCell(1).value?.toString().trim()
             const country = row.getCell(2).value?.toString().trim()
@@ -168,7 +168,7 @@ export function processWorkbook(workbook: any) {
     const addressWorksheet = workbook.getWorksheet('Addresses')
     const addressesData: any[] = []
 
-    addressWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    addressWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const givenName = row.getCell(1).value?.toString().trim()
             const surname = row.getCell(2).value?.toString().trim()
@@ -261,7 +261,7 @@ export function processWorkbook(workbook: any) {
     const mapSchemaNameToSchemaId = new Map()
     const schemasData: any[] = []
 
-    schemasWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    schemasWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const name = row.getCell(1).value?.toString().trim()
             let content = row.getCell(2).value?.toString().trim()
@@ -297,7 +297,7 @@ export function processWorkbook(workbook: any) {
     const mapExportDataTemplateNameToExportDataTemplateId = new Map()
     const exportDataTemplatesData: any[] = []
 
-    exportDataTemplatesWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    exportDataTemplatesWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const name = row.getCell(1).value?.toString().trim()
             const schemaName = row.getCell(2).value?.toString().trim()
@@ -340,7 +340,7 @@ export function processWorkbook(workbook: any) {
     const mapTransportNameToTransportId = new Map()
     const transportsData: any[] = []
 
-    transportsWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    transportsWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const type = row.getCell(1).value?.toString().trim()
             const name = row.getCell(2).value?.toString().trim()
@@ -394,7 +394,7 @@ export function processWorkbook(workbook: any) {
     const configurationWorksheet = workbook.getWorksheet("Configurations")
     const configurationsData: any[] = []
 
-    configurationWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    configurationWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const name = row.getCell(1).value?.toString().trim()
             const exportDataTemplateName = row.getCell(2).value?.toString().trim()
@@ -435,7 +435,7 @@ export function processWorkbook(workbook: any) {
     const settingsWorksheet = workbook.getWorksheet("Settings")
     const settingsData: any[] = []
 
-    settingsWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+    settingsWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
         if (rowNumber > 1) {
             const key = row.getCell(1).value?.toString().trim()
             const value = row.getCell(2).value?.toString().trim()
