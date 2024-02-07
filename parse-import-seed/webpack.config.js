@@ -21,4 +21,5 @@ module.exports = {
     extensions: ['.ts', '.tsx', '.js'],
     modules: [path.resolve(__dirname), 'node_modules']
   },
+  target: 'web'
 };
