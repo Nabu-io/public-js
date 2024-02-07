@@ -88,23 +88,22 @@ function validateSheet(worksheet: ExcelJS.Worksheet, expectedColumns: string[]) 
 }
 
 
-export default function validateExcelFile(arrayBuffer: ArrayBuffer): Promise<any> {
+export default function validateExcelFile(file: ArrayBuffer): Promise<ExcelJS.Workbook> {
     const workbook = new ExcelJS.Workbook();
-    return workbook.xlsx.load(arrayBuffer)
-        .then(() => {
+    return workbook.xlsx.load(file).then(() => {
 
-            for (let sheetName of workbook.worksheets.map(w => w.name.trim())) {
-                const columns = worksheetNameToColumns[sheetName];
-                if (!columns) {
-                    throw new Error(`Columns for worksheet '${sheetName}' not found.`);
-                }
-    
-                const valid = validateSheet(workbook.getWorksheet(sheetName) as Worksheet, columns);
-                if (!valid) {
-                    throw new Error(`Validation failed for worksheet '${sheetName}'.`);
-                }
+        for (let sheetName of workbook.worksheets.map(w => w.name.trim())) {
+            const columns = worksheetNameToColumns[sheetName];
+            if (!columns) {
+                throw new Error(`Columns for worksheet '${sheetName}' not found.`);
             }
 
-            return workbook
-        })
+            const valid = validateSheet(workbook.getWorksheet(sheetName) as Worksheet, columns);
+            if (!valid) {
+                throw new Error(`Validation failed for worksheet '${sheetName}'.`);
+            }
+        }
+
+        return workbook
+    })
 }

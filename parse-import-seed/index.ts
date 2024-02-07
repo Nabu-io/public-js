@@ -1,12 +1,10 @@
 import validateExcelFile from "./validateFile"
-import { processWorkbook } from "./processWorkbook"
+import processWorkbook from "./processWorkbook"
 
-export default (file: File): Promise<any> => {
-
+export default function parseImportSeed(file: ArrayBuffer): Promise<any> {
   return validateExcelFile(file)
     .then((workbook: any) => processWorkbook(workbook))
     .catch((error: any) => {
       // do something
     })
-
 }

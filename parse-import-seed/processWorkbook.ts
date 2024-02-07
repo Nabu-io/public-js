@@ -1,28 +1,28 @@
 
-import { CellHyperlinkValue } from 'exceljs'
-import Validator from 'validator' // library
-import { validateEmail, validatePassword } from './validationHelpers'; // ok
-import * as types from "./types";
+import { CellHyperlinkValue, Workbook } from 'exceljs'
+import Validator from 'validator'
+import { validateEmail, validatePassword } from './validationHelpers';
+import { ImportSeedPayload } from './interface';
 
+const GROUP_TYPE = ['SERVICE', 'TEAM', 'OFFICE', 'ORGANIZATION']
+const ROLE = ['USER', 'MANAGER', 'ADMIN', 'SUPERADMIN', 'GUEST']
+const POSITION = ['REGISTERED_CUSTOMS_REPRESENTATIVE', 'CUSTOMS_MANAGER', 'CUSTOMS_TEAM_MANAGER', 'INFORMATION_SYSTEMS_MANAGER', 'NABU_ADMINISTRATOR']
+const LANGUAGE = ['fr', 'en']
+const TRANSPORT_TYPE = ['FTP', 'SFTP', 'API']
 
-export function processWorkbook(workbook: any) {
-
-    // Since we validate every sheet and columns, we can now access it safely.
+function parseOrganizationWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<string, string>): any[] {
     const organizationWorksheet = workbook.getWorksheet('Organization & Groups')
-    const mapGroupNameToGroupId = new Map()
-    let groupsData: any[] = []
-
-    organizationWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const groups: any[] = []
+    organizationWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const groupName = row.getCell(1).value?.toString().trim()
             const groupType = row.getCell(2).value?.toString().trim()
             const parent = row.getCell(3).value?.toString().trim()
 
             try {
-                // TODO - fix
-                // if (!Object.values(api.Type).includes(groupType as api.Type)) {
-                //     throw new Error("Invalid groupType")
-                // }
+                if (!GROUP_TYPE.includes(groupType as string)) {
+                    throw new Error("Invalid groupType")
+                }
 
                 if (!groupName) {
                     throw new Error("Invalid groupName")
@@ -32,30 +32,25 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid parent, parent must be defined before using it.")
                 }
 
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Organization & Groups)`)
             }
 
             mapGroupNameToGroupId.set(groupName, groupName)
-            groupsData.push({
+            groups.push({
                 groupName,
                 groupType,
                 parent
             })
         }
     });
+    return groups
+}
 
-    // TODO - fix
-    // const hasAnOrganization = groupsData.some(group => group.groupType == types.Type.Organization)
-
-    // if (!hasAnOrganization) {
-    //     throw new Error(`At least a group should be of type of ${types.Type.Organization}`)
-    // }
-
+function parseUsersWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<string, string>): any[] {
     const usersWorksheet = workbook.getWorksheet('Users')
-    const usersData: any[] = []
-
-    usersWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const users: any[] = []
+    usersWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const email = (row.getCell(1).value as CellHyperlinkValue).text.trim()
             const role = row.getCell(2).value?.toString().trim()
@@ -68,14 +63,13 @@ export function processWorkbook(workbook: any) {
             const password = row.getCell(9).value?.toString().trim()
 
             try {
-                if (!validateEmail(email as string)) {
+                if (!validateEmail(email)) {
                     throw new Error("Invalid email")
                 }
 
-                // TODO - fix
-                // if (!Object.values(api.Role).includes(role as api.Role)) {
-                //     throw new Error("Invalid role")
-                // }
+                if (!ROLE.includes(role as string)) {
+                    throw new Error("Invalid role")
+                }
 
                 if (!['oui', 'non'].includes(active as string)) {
                     throw new Error("Invalid value for active")
@@ -97,24 +91,23 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid last name")
                 }
 
-                // TODO - fix
-                // if (!Object.values(api.Position).includes(position as api.Position)) {
-                //     throw new Error("Invalid position")
-                // }
+                if (!POSITION.includes(position as string)) {
+                    throw new Error("Invalid position")
+                }
 
-                // if (!Object.values(api.Language).includes(language as api.Language)) {
-                //     throw new Error("Invalid language")
-                // }
+                if (!LANGUAGE.includes(language as string)) {
+                    throw new Error("Invalid language")
+                }
 
                 if (!validatePassword(password as string)) {
                     throw new Error("Invalid password format")
                 }
 
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Users)`)
             }
 
-            usersData.push({
+            users.push({
                 email,
                 role,
                 active: active === "oui" ? true : false,
@@ -126,11 +119,13 @@ export function processWorkbook(workbook: any) {
             })
         }
     })
+    return users
+}
 
-
+function parseCompanyRegistrationNumbersWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<string, string>): any[] {
     const companyRegistrationNumbersWorksheet = workbook.getWorksheet('Company Registration Numbers')
-    const companyRegistrationsData: any[] = []
-    companyRegistrationNumbersWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const companyRegistrationNumbers: any[] = []
+    companyRegistrationNumbersWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const value = row.getCell(1).value?.toString().trim()
             const country = row.getCell(2).value?.toString().trim()
@@ -141,7 +136,7 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid value")
                 }
 
-                if (!Validator.isISO31661Alpha3(country as string)) {
+                if (!country) {
                     throw new Error("Invalid country")
                 }
 
@@ -152,23 +147,24 @@ export function processWorkbook(workbook: any) {
                 if (!mapGroupNameToGroupId.get(groupName)) {
                     throw new Error("Group name is not defined in the previous worksheet")
                 }
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Company Registration Numbers)`)
             }
 
-            companyRegistrationsData.push({
+            companyRegistrationNumbers.push({
                 value,
                 country,
                 groupName
             })
         }
     })
+    return companyRegistrationNumbers
+}
 
-
+function parseAddressesWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<string, string>): any[] {
     const addressWorksheet = workbook.getWorksheet('Addresses')
-    const addressesData: any[] = []
-
-    addressWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const addresses: any[] = []
+    addressWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const givenName = row.getCell(1).value?.toString().trim()
             const surname = row.getCell(2).value?.toString().trim()
@@ -220,7 +216,7 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid postCode")
                 }
 
-                if (!Validator.isISO31661Alpha3(country as string)) {
+                if (!country) {
                     throw new Error("Invalid country")
                 }
 
@@ -236,11 +232,11 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Group name is not defined in the previous worksheet")
                 }
 
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Addresses)`)
             }
 
-            addressesData.push({
+            addresses.push({
                 givenName,
                 surname,
                 companyName,
@@ -256,12 +252,13 @@ export function processWorkbook(workbook: any) {
             })
         }
     })
+    return addresses
+}
 
+function parseSchemasWorksheet(workbook: Workbook, mapSchemaNameToSchemaId: Map<string, string>): any[] {
     const schemasWorksheet = workbook.getWorksheet("Schemas")
-    const mapSchemaNameToSchemaId = new Map()
-    const schemasData: any[] = []
-
-    schemasWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const schemas: any[] = []
+    schemasWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const name = row.getCell(1).value?.toString().trim()
             let content = row.getCell(2).value?.toString().trim()
@@ -280,24 +277,24 @@ export function processWorkbook(workbook: any) {
                 } catch (_) {
                     throw new Error("Content is an invalid JSON")
                 }
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Schemas)`)
             }
 
             mapSchemaNameToSchemaId.set(name, name)
-            schemasData.push({
+            schemas.push({
                 name,
                 content
             })
         }
     })
+    return schemas;
+}
 
-
+function parseExportDataTemplatesWorksheet(workbook: Workbook, mapSchemaNameToSchemaId: Map<string, string>, mapExportDataTemplateNameToExportDataTemplateId: Map<string, string>): any[] {
     const exportDataTemplatesWorksheet = workbook.getWorksheet("Export Data Templates")
-    const mapExportDataTemplateNameToExportDataTemplateId = new Map()
-    const exportDataTemplatesData: any[] = []
-
-    exportDataTemplatesWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const exportDataTemplates: any[] = []
+    exportDataTemplatesWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const name = row.getCell(1).value?.toString().trim()
             const schemaName = row.getCell(2).value?.toString().trim()
@@ -317,30 +314,31 @@ export function processWorkbook(workbook: any) {
                     }
                 }
 
-                if (!mapSchemaNameToSchemaId.get(schemaName)) {
+                if (!mapSchemaNameToSchemaId.get(schemaName as string)) {
                     throw new Error("Schema name is not defined in the previous worksheet")
                 }
 
 
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Export Data Templates)`)
             }
 
             mapExportDataTemplateNameToExportDataTemplateId.set(name, name)
 
-            exportDataTemplatesData.push({
+            exportDataTemplates.push({
                 name,
                 schemaName,
                 isNew: isNew === "oui" ? true : false
             })
         }
     })
+    return exportDataTemplates
+}
 
+function parseTransportsWorksheet(workbook: Workbook, mapTransportNameToTransportId: Map<string, string>) {
     const transportsWorksheet = workbook.getWorksheet("Transports")
-    const mapTransportNameToTransportId = new Map()
-    const transportsData: any[] = []
-
-    transportsWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const transports: any[] = []
+    transportsWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const type = row.getCell(1).value?.toString().trim()
             const name = row.getCell(2).value?.toString().trim()
@@ -350,10 +348,9 @@ export function processWorkbook(workbook: any) {
             const password = row.getCell(6).value?.toString().trim()
 
             try {
-                // TODO -fix
-                // if (!Object.values(api.Type2).includes(type as api.Type2)) {
-                //     throw new Error("Invalid transport type")
-                // }
+                if (!TRANSPORT_TYPE.includes(type as string)) {
+                    throw new Error("Invalid transport type")
+                }
 
                 if (!name) {
                     throw new Error("Invalid name")
@@ -367,20 +364,20 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid port")
                 }
 
-                if (!validateEmail(username as string)) {
+                if (!validateEmail(username)) {
                     throw new Error("Invalid username")
                 }
 
                 if (!validatePassword(password as string)) {
                     throw new Error("Invalid password format")
                 }
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Transports)`)
             }
 
             mapTransportNameToTransportId.set(name, name)
 
-            transportsData.push({
+            transports.push({
                 type,
                 name,
                 address,
@@ -390,11 +387,13 @@ export function processWorkbook(workbook: any) {
             })
         }
     })
+    return transports
+}
 
+function parseConfigurationsWorksheet(workbook: Workbook, mapExportDataTemplateNameToExportDataTemplateId: Map<string, string>, mapTransportNameToTransportId: Map<string, string>, mapGroupNameToGroupId: Map<string, string>): any[] {
     const configurationWorksheet = workbook.getWorksheet("Configurations")
-    const configurationsData: any[] = []
-
-    configurationWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const configurations: any[] = []
+    configurationWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const name = row.getCell(1).value?.toString().trim()
             const exportDataTemplateName = row.getCell(2).value?.toString().trim()
@@ -407,22 +406,22 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid name")
                 }
 
-                if (!mapExportDataTemplateNameToExportDataTemplateId.get(exportDataTemplateName)) {
+                if (!mapExportDataTemplateNameToExportDataTemplateId.get(exportDataTemplateName as string)) {
                     throw new Error("ExportDataTemplateName is not defined in the previous worksheet")
                 }
 
-                if (!mapTransportNameToTransportId.get(transportName)) {
+                if (!mapTransportNameToTransportId.get(transportName as string)) {
                     throw new Error("TransportName is not defined in the previous worksheet")
                 }
 
-                if (!mapGroupNameToGroupId.get(groupName)) {
+                if (!mapGroupNameToGroupId.get(groupName as string)) {
                     throw new Error("GroupName is not defined in the previous worksheet")
                 }
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Configurations)`)
             }
 
-            configurationsData.push({
+            configurations.push({
                 name,
                 exportDataTemplateName,
                 transportName,
@@ -431,11 +430,13 @@ export function processWorkbook(workbook: any) {
             })
         }
     })
+    return configurations
+}
 
+function parseSettingsWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<string, string>): any[] {
     const settingsWorksheet = workbook.getWorksheet("Settings")
-    const settingsData: any[] = []
-
-    settingsWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const settings: any[] = []
+    settingsWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const key = row.getCell(1).value?.toString().trim()
             const value = row.getCell(2).value?.toString().trim()
@@ -450,30 +451,69 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid value")
                 }
 
-                if (!mapGroupNameToGroupId.get(groupName)) {
+                if (!mapGroupNameToGroupId.get(groupName as string)) {
                     throw new Error("GroupName is not defined in the previous worksheet")
                 }
-            } catch (err: any) {
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Settings)`)
             }
 
-            settingsData.push({
+            settings.push({
                 key,
                 value,
                 groupName
             })
         }
     })
+    return settings
+}
 
-    return {
-      settingsData,
-      configurationsData,
-      transportsData,
-      exportDataTemplatesData,
-      schemasData,
-      addressesData,
-      companyRegistrationsData,
-      usersData,
-      groupsData
+
+export default function processWorkbook(workbook: any) {
+    /**
+     * Parse the excel file
+     */
+    const jsonData: ImportSeedPayload = {
+        organizations: [],
+        groups: [],
+        users: [],
+        companyRegistrationNumbers: [],
+        exportDataTemplates: [],
+        addresses: [],
+        schemas: [],
+        transports: [],
+        configurations: [],
+        settings: [],
+    };
+
+    const mapGroupNameToGroupId = new Map()
+    const mapSchemaNameToSchemaId = new Map()
+    const mapExportDataTemplateNameToExportDataTemplateId = new Map()
+    const mapTransportNameToTransportId = new Map()
+
+    jsonData.groups = parseOrganizationWorksheet(workbook, mapGroupNameToGroupId)
+    const hasAnOrganization = jsonData.groups.some(group => group.groupType == "ORGANIZATION")
+
+    if (!hasAnOrganization) {
+        throw new Error(`At least a group should be of type of ${"ORGANIZATION"}`)
     }
+
+    jsonData.users = parseUsersWorksheet(workbook, mapGroupNameToGroupId)
+
+    jsonData.companyRegistrationNumbers = parseCompanyRegistrationNumbersWorksheet(workbook, mapGroupNameToGroupId)
+
+    jsonData.addresses = parseAddressesWorksheet(workbook, mapGroupNameToGroupId)
+
+    jsonData.schemas = parseSchemasWorksheet(workbook, mapSchemaNameToSchemaId)
+
+    jsonData.companyRegistrationNumbers = parseExportDataTemplatesWorksheet(workbook, mapSchemaNameToSchemaId, mapExportDataTemplateNameToExportDataTemplateId)
+
+    jsonData.transports = parseTransportsWorksheet(workbook, mapTransportNameToTransportId)
+
+    jsonData.configurations = parseConfigurationsWorksheet(workbook, mapExportDataTemplateNameToExportDataTemplateId, mapTransportNameToTransportId, mapGroupNameToGroupId)
+
+    jsonData.settings = parseSettingsWorksheet(workbook, mapGroupNameToGroupId)
+
+
+    return jsonData
 }
