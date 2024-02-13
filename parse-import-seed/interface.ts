@@ -28,6 +28,7 @@ export interface Address {
     companyName: string;
     streetNumber: string;
     streetName: string;
+    streeType: string;
     floor: string;
     town: string;
     region: string;
@@ -72,7 +73,6 @@ export interface Setting {
 }
 
 export interface ImportSeedPayload {
-    organizations: Group[];
     groups: Group[];
     users: User[];
     companyRegistrationNumbers: CompanyRegistrationNumber[];

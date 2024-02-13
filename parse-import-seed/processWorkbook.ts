@@ -10,6 +10,32 @@ const POSITION = ['REGISTERED_CUSTOMS_REPRESENTATIVE', 'CUSTOMS_MANAGER', 'CUSTO
 const LANGUAGE = ['fr', 'en']
 const TRANSPORT_TYPE = ['FTP', 'SFTP', 'API']
 
+const STREET_TYPE: string[] = [
+    "Street", "St", "Road", "Rd", "Avenue", "Ave", "Boulevard", "Blvd",
+    "Drive", "Dr", "Lane", "Ln", "Court", "Ct", "Plaza", "Plz", "Square", "Sq",
+    "Terrace", "Ter", "Place", "Pl", "Trail", "Trl", "Way", "Wy", "Loop", "Lp",
+    "Alley", "Aly", "Parkway", "Pkwy", "Esplanade", "Expressway", "Expwy",
+    "Freeway", "Fwy", "Highway", "Hwy", "Circle", "Cir", "Close", "Cl",
+    "Crescent", "Cres", "Drive", "Dr", "Gardens", "Gdns", "Gate", "Gt",
+    "Green", "Grn", "Grove", "Grv", "Hill", "Hl", "Island", "Isld",
+    "Junction", "Jct", "Key", "Ky", "Landing", "Lndg", "Meadow", "Mdw",
+    "Mews", "Pass", "Path", "Pike", "Row", "Rue", "Run", "Walk", "Quay",
+    "Crossing", "Xing", "Circle", "Crcle", "Corridor", "Cory", "Arcade", "Arc",
+    "Bay", "By", "Beach", "Bch", "Bend", "Bnd", "Cape", "Cpe", "Cliff", "Clf",
+    "Common", "Cmn", "Corner", "Cor", "Camp", "Cp", "Curve", "Cv", "Cove", "Cv",
+    "Dale", "Dl", "Dam", "Dm", "Divide", "Dv", "Dock", "Dk", "Estate", "Est",
+    "Flats", "Flts", "Ford", "Frd", "Forest", "Frst", "Fork", "Frk", "Fort", "Ft",
+    "Glen", "Gln", "Harbor", "Hbr", "Haven", "Hvn", "Heights", "Hts", "Highway", "Hwy",
+    "Hollow", "Holw", "Inlet", "Inlt", "Island", "Isl", "Junction", "Jct", "Knoll", "Knl",
+    "Lake", "Lk", "Land", "Lnd", "Ledge", "Ldg", "Manor", "Mnr", "Mill", "Ml", "Mission", "Msn",
+    "Mount", "Mt", "Mountain", "Mtn", "Orchard", "Orch", "Parade", "Pde", "Peak", "Pk",
+    "Pines", "Pnes", "Point", "Pt", "Port", "Prt", "Ridge", "Rdg", "River", "Rvr", "Shore", "Shr",
+    "Spring", "Spg", "Square", "Sq", "Station", "Stn", "Stravenue", "Stra", "Stream", "Stm",
+    "Street", "St", "Summit", "Smt", "Terrace", "Ter", "Turnpike", "Tpke", "Valley", "Vly",
+    "Village", "Vlg", "Vista", "Vis", "Walk", "Wlk", "Wall", "Wl", "Way", "Wy", "Wharf", "Whrf",
+    "Wood", "Wd", "Woods", "Wds"
+];
+
 function parseOrganizationWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<string, string>): any[] {
     const organizationWorksheet = workbook.getWorksheet('Organization & Groups')
     const groups: any[] = []
@@ -170,14 +196,15 @@ function parseAddressesWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<
             const surname = row.getCell(2).value?.toString().trim()
             const companyName = row.getCell(3).value?.toString().trim()
             const streetNumber = row.getCell(4).value?.toString().trim()
-            const streetName = row.getCell(5).value?.toString().trim()
-            const floor = row.getCell(6).value?.toString().trim()
-            const town = row.getCell(7).value?.toString().trim()
-            const region = row.getCell(8).value?.toString().trim()
-            const postCode = row.getCell(9).value?.toString().trim()
-            const country = row.getCell(10).value?.toString().trim()
-            const tag = row.getCell(11).value?.toString().trim()
-            const groupName = row.getCell(12).value?.toString().trim()
+            const streetType = row.getCell(5).value?.toString().trim()
+            const streetName = row.getCell(6).value?.toString().trim()
+            const floor = row.getCell(7).value?.toString().trim()
+            const town = row.getCell(8).value?.toString().trim()
+            const region = row.getCell(9).value?.toString().trim()
+            const postCode = row.getCell(10).value?.toString().trim()
+            const country = row.getCell(11).value?.toString().trim()
+            const tag = row.getCell(12).value?.toString().trim()
+            const groupName = row.getCell(13).value?.toString().trim()
 
             try {
                 if (!givenName) {
@@ -198,6 +225,10 @@ function parseAddressesWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<
 
                 if (!streetName) {
                     throw new Error("Invalid streetName")
+                }
+
+                if (!STREET_TYPE.includes(streetType as string)) {
+                    throw new Error("Invalid streetType")
                 }
 
                 if (!floor) {
@@ -242,6 +273,7 @@ function parseAddressesWorksheet(workbook: Workbook, mapGroupNameToGroupId: Map<
                 companyName,
                 streetNumber,
                 streetName,
+                streetType,
                 floor,
                 town,
                 region,
@@ -474,7 +506,6 @@ export default function processWorkbook(workbook: any) {
      * Parse the excel file
      */
     const jsonData: ImportSeedPayload = {
-        organizations: [],
         groups: [],
         users: [],
         companyRegistrationNumbers: [],
@@ -506,7 +537,7 @@ export default function processWorkbook(workbook: any) {
 
     jsonData.schemas = parseSchemasWorksheet(workbook, mapSchemaNameToSchemaId)
 
-    jsonData.companyRegistrationNumbers = parseExportDataTemplatesWorksheet(workbook, mapSchemaNameToSchemaId, mapExportDataTemplateNameToExportDataTemplateId)
+    jsonData.exportDataTemplates = parseExportDataTemplatesWorksheet(workbook, mapSchemaNameToSchemaId, mapExportDataTemplateNameToExportDataTemplateId)
 
     jsonData.transports = parseTransportsWorksheet(workbook, mapTransportNameToTransportId)
 
