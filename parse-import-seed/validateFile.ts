@@ -1,10 +1,28 @@
 import ExcelJS, { Worksheet } from 'exceljs'
 
 const worksheetNameToColumns: { [key: string]: string[] } = {
-    'Organization & Groups': [
+    'Organizations': [
+        'Organization Name',
+    ],
+    'Groups': [
         'Group Name',
         'Group Type',
-        'Parent'
+        'Parent',
+        'Organization Name',
+        'Company Registration Number',
+        'Country',
+        'Address - Given Name',
+        'Address - Surname',
+        'Address - Company Name',
+        'Address - Street No',
+        'Address - Street Type',
+        'Address - Street Name',
+        'Address - Floor',
+        'Address - Town',
+        'Address - Region',
+        'Address - Postcode',
+        'Address - Country',
+        'Address - Tag',
     ],
     'Users': [
         'Email',
@@ -17,56 +35,6 @@ const worksheetNameToColumns: { [key: string]: string[] } = {
         'Language',
         'Password'
     ],
-    'Company Registration Numbers': [
-        'Value',
-        'Country',
-        'Group Name'
-    ],
-    'Addresses': [
-        'Given Name',
-        'Surname',
-        'Company Name',
-        'Street No',
-        'Street Name',
-        'Floor',
-        'Town',
-        'Region',
-        'PostCode',
-        'Country',
-        'Tag',
-        'Group Name'
-    ],
-    'Schemas': [
-        'Name',
-        'Content'
-    ],
-    'Export Data Templates': [
-        'Name',
-        'Schema Name',
-        'New'
-    ],
-    'Transports': [
-        'Type',
-        'Name',
-        'Address',
-        'Port',
-        'Username',
-        'Password',
-        'Path',
-        'File Name Template'
-    ],
-    'Configurations': [
-        'Name',
-        'ExportDataTemplate Name',
-        'Transport Name',
-        'Group Name',
-        'Preset'
-    ],
-    'Settings': [
-        'Key',
-        'Value',
-        'Group Name'
-    ]
 }
 
 function validateSheet(worksheet: ExcelJS.Worksheet, expectedColumns: string[]) {

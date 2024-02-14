@@ -5,6 +5,7 @@ export default function parseImportSeed(file: ArrayBuffer): Promise<any> {
   return validateExcelFile(file)
     .then((workbook: any) => processWorkbook(workbook))
     .catch((error: any) => {
-      // do something
+      console.error('Error parsing import seed: ', error)
+      throw error
     })
 }
