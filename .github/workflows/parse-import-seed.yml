@@ -40,7 +40,7 @@ jobs:
         else
           git checkout -b ${{ env.DEPLOY_BRANCH }}
         fi
-        git add -f dist
+        git add -f ./parse-import-seed/dist
         git commit -m "Auto-publish to GitHub Pages"
         git push origin ${{ env.DEPLOY_BRANCH }} --force
       env:
