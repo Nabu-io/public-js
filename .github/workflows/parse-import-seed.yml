@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - fix/ci
 
 env:
   DEPLOY_BRANCH: parse-import-seed-compiled
@@ -23,9 +24,11 @@ jobs:
 
     - name: Install Dependencies
       run: npm install
+      working-directory: ./parse-import-seed
 
     - name: Build TypeScript
-      run: npx tsc
+      run: npm run build
+      working-directory: ./parse-import-seed
 
     - name: Deploy to GitHub Pages
       run: |
