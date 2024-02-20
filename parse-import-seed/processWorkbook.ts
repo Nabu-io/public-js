@@ -1,61 +1,192 @@
 
-import { CellHyperlinkValue } from 'exceljs'
-import Validator from 'validator' // library
-import { validateEmail, validatePassword } from './validationHelpers'; // ok
-import * as types from "./types";
+import { CellHyperlinkValue, Workbook } from 'exceljs'
+import { validateEmail, validatePassword } from './validationHelpers';
+import { ImportSeedPayload } from './interface';
 
+const GROUP_TYPE = ['SERVICE', 'TEAM', 'OFFICE']
+const ROLE = ['USER', 'MANAGER', 'ADMIN', 'SUPERADMIN', 'GUEST']
+const POSITION = ['REGISTERED_CUSTOMS_REPRESENTATIVE', 'CUSTOMS_MANAGER', 'CUSTOMS_TEAM_MANAGER', 'INFORMATION_SYSTEMS_MANAGER', 'NABU_ADMINISTRATOR']
+const LANGUAGE = ['fr', 'en']
 
-export function processWorkbook(workbook: any) {
+const STREET_TYPE: string[] = [
+    "Street", "St", "Road", "Rd", "Avenue", "Ave", "Boulevard", "Blvd",
+    "Drive", "Dr", "Lane", "Ln", "Court", "Ct", "Plaza", "Plz", "Square", "Sq",
+    "Terrace", "Ter", "Place", "Pl", "Trail", "Trl", "Way", "Wy", "Loop", "Lp",
+    "Alley", "Aly", "Parkway", "Pkwy", "Esplanade", "Expressway", "Expwy",
+    "Freeway", "Fwy", "Highway", "Hwy", "Circle", "Cir", "Close", "Cl",
+    "Crescent", "Cres", "Drive", "Dr", "Gardens", "Gdns", "Gate", "Gt",
+    "Green", "Grn", "Grove", "Grv", "Hill", "Hl", "Island", "Isld",
+    "Junction", "Jct", "Key", "Ky", "Landing", "Lndg", "Meadow", "Mdw",
+    "Mews", "Pass", "Path", "Pike", "Row", "Rue", "Run", "Walk", "Quay",
+    "Crossing", "Xing", "Circle", "Crcle", "Corridor", "Cory", "Arcade", "Arc",
+    "Bay", "By", "Beach", "Bch", "Bend", "Bnd", "Cape", "Cpe", "Cliff", "Clf",
+    "Common", "Cmn", "Corner", "Cor", "Camp", "Cp", "Curve", "Cv", "Cove", "Cv",
+    "Dale", "Dl", "Dam", "Dm", "Divide", "Dv", "Dock", "Dk", "Estate", "Est",
+    "Flats", "Flts", "Ford", "Frd", "Forest", "Frst", "Fork", "Frk", "Fort", "Ft",
+    "Glen", "Gln", "Harbor", "Hbr", "Haven", "Hvn", "Heights", "Hts", "Highway", "Hwy",
+    "Hollow", "Holw", "Inlet", "Inlt", "Island", "Isl", "Junction", "Jct", "Knoll", "Knl",
+    "Lake", "Lk", "Land", "Lnd", "Ledge", "Ldg", "Manor", "Mnr", "Mill", "Ml", "Mission", "Msn",
+    "Mount", "Mt", "Mountain", "Mtn", "Orchard", "Orch", "Parade", "Pde", "Peak", "Pk",
+    "Pines", "Pnes", "Point", "Pt", "Port", "Prt", "Ridge", "Rdg", "River", "Rvr", "Shore", "Shr",
+    "Spring", "Spg", "Square", "Sq", "Station", "Stn", "Stravenue", "Stra", "Stream", "Stm",
+    "Street", "St", "Summit", "Smt", "Terrace", "Ter", "Turnpike", "Tpke", "Valley", "Vly",
+    "Village", "Vlg", "Vista", "Vis", "Walk", "Wlk", "Wall", "Wl", "Way", "Wy", "Wharf", "Whrf",
+    "Wood", "Wd", "Woods", "Wds"
+];
 
-    // Since we validate every sheet and columns, we can now access it safely.
-    const organizationWorksheet = workbook.getWorksheet('Organization & Groups')
-    const mapGroupNameToGroupId = new Map()
-    let groupsData: any[] = []
-
-    organizationWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+function parseOrganizationWorksheet(workbook: Workbook): any[] {
+    const organizationWorksheet = workbook.getWorksheet('Organizations')
+    const organizations: any[] = []
+    organizationWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
-            const groupName = row.getCell(1).value?.toString().trim()
-            const groupType = row.getCell(2).value?.toString().trim()
-            const parent = row.getCell(3).value?.toString().trim()
-
+            const name = row.getCell(1).value?.toString().trim()
             try {
-                // TODO - fix
-                // if (!Object.values(api.Type).includes(groupType as api.Type)) {
-                //     throw new Error("Invalid groupType")
-                // }
-
-                if (!groupName) {
-                    throw new Error("Invalid groupName")
+                if (!name) {
+                    throw new Error("Invalid organizationName")
                 }
-
-                if (parent && !mapGroupNameToGroupId.get(parent)) {
-                    throw new Error("Invalid parent, parent must be defined before using it.")
-                }
-
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Organization & Groups)`)
+            } catch (err) {
+                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Organization)`)
             }
 
-            mapGroupNameToGroupId.set(groupName, groupName)
-            groupsData.push({
-                groupName,
-                groupType,
-                parent
+            organizations.push({
+                name
             })
         }
     });
+    return organizations
+}
 
-    // TODO - fix
-    // const hasAnOrganization = groupsData.some(group => group.groupType == types.Type.Organization)
+function parseGroupWorksheet(workbook: Workbook): any[] {
+    const groupsWorksheet = workbook.getWorksheet('Groups')
+    const groups: any[] = []
+    groupsWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+        if (rowNumber > 1) {
+            const name = row.getCell(1).value?.toString().trim()
+            const type = row.getCell(2).value?.toString().trim()
+            const parent = row.getCell(3).value?.toString().trim()
+            const organizationName = row.getCell(4).value?.toString().trim()
+            const valueCompanyRegistrationNumber = row.getCell(5).value?.toString().trim()
+            const country = row.getCell(6).value?.toString().trim()
+            const addressGivenName = row.getCell(7).value?.toString().trim()
+            const addressSurname = row.getCell(8).value?.toString().trim()
+            const addressCompanyName = row.getCell(9).value?.toString().trim()
+            const addressStreetNo = row.getCell(10).value?.toString().trim()
+            const addressStreetType = row.getCell(11).value?.toString().trim()
+            const addressStreetName = row.getCell(12).value?.toString().trim()
+            const addressFloor = row.getCell(13).value?.toString().trim()
+            const addressTown = row.getCell(14).value?.toString().trim()
+            const addressRegion = row.getCell(15).value?.toString().trim()
+            const addressPostcode = row.getCell(16).value?.toString().trim()
+            const addressCountry = row.getCell(17).value?.toString().trim()
+            const addressTag = row.getCell(18).value?.toString().trim()
 
-    // if (!hasAnOrganization) {
-    //     throw new Error(`At least a group should be of type of ${types.Type.Organization}`)
-    // }
+            try {
+                if (!name) {
+                    throw new Error("Invalid name")
+                }
 
+                if (!GROUP_TYPE.includes(type as string)) {
+                    throw new Error("Invalid groupType")
+                }
+
+                if (!organizationName) {
+                    throw new Error("Invalid organizationName")
+                }
+
+                if (!valueCompanyRegistrationNumber) {
+                    throw new Error("Invalid companyRegistrationNumber")
+                }
+
+                if (!country) {
+                    throw new Error("Invalid country")
+                }
+
+                if (!addressGivenName) {
+                    throw new Error("Invalid addressGivenName")
+                }
+
+                if (!addressSurname) {
+                    throw new Error("Invalid addressSurname")
+                }
+
+                if (!addressCompanyName) {
+                    throw new Error("Invalid addressCompanyName")
+                }
+
+                if (!addressStreetNo) {
+                    throw new Error("Invalid addressStreetNo")
+                }
+
+                if (!STREET_TYPE.includes(addressStreetType as string)) {
+                    throw new Error("Invalid addressStreetType")
+                }
+
+                if (!addressStreetName) {
+                    throw new Error("Invalid addressStreetName")
+                }
+
+                if (!addressFloor) {
+                    throw new Error("Invalid addressFloor")
+                }
+
+                if (!addressTown) {
+                    throw new Error("Invalid addressTown")
+                }
+
+                if (!addressRegion) {
+                    throw new Error("Invalid addressRegion")
+                }
+
+                if (!addressPostcode) {
+                    throw new Error("Invalid addressPostcode")
+                }
+
+
+                if (!addressCountry) {
+                    throw new Error("Invalid addressCountry")
+                }
+
+                if (!addressTag) {
+                    throw new Error("Invalid addressTag")
+                }
+
+            } catch (err) {
+                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Groups)`)
+            }
+
+            groups.push({
+                name,
+                type,
+                parent,
+                organizationName,
+                companyRegistrationNumber: {
+                    value: valueCompanyRegistrationNumber,
+                    country: country
+                },
+                address: {
+                    givenName: addressGivenName,
+                    surname: addressSurname,
+                    companyName: addressCompanyName,
+                    streetNo: addressStreetNo,
+                    streetType: addressStreetType,
+                    streetName: addressStreetName,
+                    floor: addressFloor,
+                    town: addressTown,
+                    region: addressRegion,
+                    postCode: addressPostcode,
+                    country: addressCountry,
+                    tag: addressTag
+                }
+            })
+        }
+    });
+    return groups
+}
+
+function parseUsersWorksheet(workbook: Workbook, groupsName: string[]): any[] {
     const usersWorksheet = workbook.getWorksheet('Users')
-    const usersData: any[] = []
-
-    usersWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
+    const users: any[] = []
+    usersWorksheet?.eachRow({ includeEmpty: false }, function (row, rowNumber) {
         if (rowNumber > 1) {
             const email = (row.getCell(1).value as CellHyperlinkValue).text.trim()
             const role = row.getCell(2).value?.toString().trim()
@@ -66,16 +197,16 @@ export function processWorkbook(workbook: any) {
             const position = row.getCell(7).value?.toString().trim()
             const language = row.getCell(8).value?.toString().trim()
             const password = row.getCell(9).value?.toString().trim()
+            const sendEmail = row.getCell(10).value?.toString().trim()
 
             try {
-                if (!validateEmail(email as string)) {
+                if (!validateEmail(email)) {
                     throw new Error("Invalid email")
                 }
 
-                // TODO - fix
-                // if (!Object.values(api.Role).includes(role as api.Role)) {
-                //     throw new Error("Invalid role")
-                // }
+                if (!ROLE.includes(role as string)) {
+                    throw new Error("Invalid role")
+                }
 
                 if (!['oui', 'non'].includes(active as string)) {
                     throw new Error("Invalid value for active")
@@ -85,7 +216,7 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid groupName")
                 }
 
-                if (!mapGroupNameToGroupId.get(groupName)) {
+                if (!groupsName.includes(groupName)) {
                     throw new Error("Group name is not defined in the previous worksheet")
                 }
 
@@ -97,24 +228,27 @@ export function processWorkbook(workbook: any) {
                     throw new Error("Invalid last name")
                 }
 
-                // TODO - fix
-                // if (!Object.values(api.Position).includes(position as api.Position)) {
-                //     throw new Error("Invalid position")
-                // }
+                if (!POSITION.includes(position as string)) {
+                    throw new Error("Invalid position")
+                }
 
-                // if (!Object.values(api.Language).includes(language as api.Language)) {
-                //     throw new Error("Invalid language")
-                // }
+                if (!LANGUAGE.includes(language as string)) {
+                    throw new Error("Invalid language")
+                }
 
                 if (!validatePassword(password as string)) {
                     throw new Error("Invalid password format")
                 }
 
-            } catch (err: any) {
+                if (!['oui', 'non'].includes(sendEmail as string)) {
+                    throw new Error("Invalid value for sendEmail expected 'oui' or 'non'")
+                }
+
+            } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Users)`)
             }
 
-            usersData.push({
+            users.push({
                 email,
                 role,
                 active: active === "oui" ? true : false,
@@ -122,358 +256,41 @@ export function processWorkbook(workbook: any) {
                 firstName,
                 lastName,
                 position,
-                password
+                language,
+                password,
+                sendEmail: sendEmail === "oui" ? true : false
             })
         }
     })
+    return users
+}
 
+export default function processWorkbook(workbook: any) {
+    /**
+     * Parse the excel file
+     */
+    const jsonData: ImportSeedPayload = {
+        organizations: [],
+        groups: [],
+    };
 
-    const companyRegistrationNumbersWorksheet = workbook.getWorksheet('Company Registration Numbers')
-    const companyRegistrationsData: any[] = []
-    companyRegistrationNumbersWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const value = row.getCell(1).value?.toString().trim()
-            const country = row.getCell(2).value?.toString().trim()
-            const groupName = row.getCell(3).value?.toString().trim()
 
-            try {
-                if (!value) {
-                    throw new Error("Invalid value")
-                }
 
-                if (!Validator.isISO31661Alpha3(country as string)) {
-                    throw new Error("Invalid country")
-                }
+    jsonData.organizations = parseOrganizationWorksheet(workbook);
+    const groups = parseGroupWorksheet(workbook)
 
-                if (!groupName) {
-                    throw new Error("Invalid groupName")
-                }
 
-                if (!mapGroupNameToGroupId.get(groupName)) {
-                    throw new Error("Group name is not defined in the previous worksheet")
-                }
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Company Registration Numbers)`)
-            }
 
-            companyRegistrationsData.push({
-                value,
-                country,
-                groupName
-            })
-        }
-    })
+    const groupsName = groups.map((group) => group.name as string)
+    const users = parseUsersWorksheet(workbook, groupsName);
 
+    jsonData.groups = groups;
 
-    const addressWorksheet = workbook.getWorksheet('Addresses')
-    const addressesData: any[] = []
+    jsonData.groups.forEach(group => {
+        const usersInGroup = users.filter(user => user.groupName === group.name);
+        usersInGroup.forEach(user => delete user.groupName);
+        group.users = usersInGroup;
+    });
 
-    addressWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const givenName = row.getCell(1).value?.toString().trim()
-            const surname = row.getCell(2).value?.toString().trim()
-            const companyName = row.getCell(3).value?.toString().trim()
-            const streetNumber = row.getCell(4).value?.toString().trim()
-            const streetName = row.getCell(5).value?.toString().trim()
-            const floor = row.getCell(6).value?.toString().trim()
-            const town = row.getCell(7).value?.toString().trim()
-            const region = row.getCell(8).value?.toString().trim()
-            const postCode = row.getCell(9).value?.toString().trim()
-            const country = row.getCell(10).value?.toString().trim()
-            const tag = row.getCell(11).value?.toString().trim()
-            const groupName = row.getCell(12).value?.toString().trim()
-
-            try {
-                if (!givenName) {
-                    throw new Error("Invalid givenName")
-                }
-
-                if (!surname) {
-                    throw new Error("Invalid surname")
-                }
-
-                if (!companyName) {
-                    throw new Error("Invalid companyName")
-                }
-
-                if (!streetNumber) {
-                    throw new Error("Invalid streetNumber")
-                }
-
-                if (!streetName) {
-                    throw new Error("Invalid streetName")
-                }
-
-                if (!floor) {
-                    throw new Error("Invalid floor")
-                }
-
-                if (!town) {
-                    throw new Error("Invalid town")
-                }
-
-                if (!region) {
-                    throw new Error("Invalid region")
-                }
-
-                if (!postCode) {
-                    throw new Error("Invalid postCode")
-                }
-
-                if (!Validator.isISO31661Alpha3(country as string)) {
-                    throw new Error("Invalid country")
-                }
-
-                if (!tag) {
-                    throw new Error("Invalid tag")
-                }
-
-                if (!groupName) {
-                    throw new Error("Invalid group name")
-                }
-
-                if (!mapGroupNameToGroupId.get(groupName)) {
-                    throw new Error("Group name is not defined in the previous worksheet")
-                }
-
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Addresses)`)
-            }
-
-            addressesData.push({
-                givenName,
-                surname,
-                companyName,
-                streetNumber,
-                streetName,
-                floor,
-                town,
-                region,
-                postCode,
-                country,
-                tag,
-                groupName
-            })
-        }
-    })
-
-    const schemasWorksheet = workbook.getWorksheet("Schemas")
-    const mapSchemaNameToSchemaId = new Map()
-    const schemasData: any[] = []
-
-    schemasWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const name = row.getCell(1).value?.toString().trim()
-            let content = row.getCell(2).value?.toString().trim()
-
-            try {
-                if (!name) {
-                    throw new Error("Invalid name")
-                }
-
-                if (!content) {
-                    throw new Error("Invalid content")
-                }
-
-                try {
-                    content = JSON.parse(content)
-                } catch (_) {
-                    throw new Error("Content is an invalid JSON")
-                }
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Schemas)`)
-            }
-
-            mapSchemaNameToSchemaId.set(name, name)
-            schemasData.push({
-                name,
-                content
-            })
-        }
-    })
-
-
-    const exportDataTemplatesWorksheet = workbook.getWorksheet("Export Data Templates")
-    const mapExportDataTemplateNameToExportDataTemplateId = new Map()
-    const exportDataTemplatesData: any[] = []
-
-    exportDataTemplatesWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const name = row.getCell(1).value?.toString().trim()
-            const schemaName = row.getCell(2).value?.toString().trim()
-            const isNew = row.getCell(3).value?.toString().trim()
-
-            try {
-                if (!name) {
-                    throw new Error("Invalid name")
-                }
-
-                if (isNew) {
-                    if (!['oui', 'non'].includes(isNew)) {
-                        throw new Error("Invalid New value")
-                    }
-                    if (isNew === "non" && Validator.isUUID(schemaName as string)) {
-                        throw new Error(`If new is false then the schema name should be an valid uuid received: ${schemaName}`)
-                    }
-                }
-
-                if (!mapSchemaNameToSchemaId.get(schemaName)) {
-                    throw new Error("Schema name is not defined in the previous worksheet")
-                }
-
-
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Export Data Templates)`)
-            }
-
-            mapExportDataTemplateNameToExportDataTemplateId.set(name, name)
-
-            exportDataTemplatesData.push({
-                name,
-                schemaName,
-                isNew: isNew === "oui" ? true : false
-            })
-        }
-    })
-
-    const transportsWorksheet = workbook.getWorksheet("Transports")
-    const mapTransportNameToTransportId = new Map()
-    const transportsData: any[] = []
-
-    transportsWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const type = row.getCell(1).value?.toString().trim()
-            const name = row.getCell(2).value?.toString().trim()
-            const address = row.getCell(3).value?.toString().trim()
-            const port = row.getCell(4).value?.toString().trim()
-            const username = (row.getCell(5).value as CellHyperlinkValue).text.toString().trim()
-            const password = row.getCell(6).value?.toString().trim()
-
-            try {
-                // TODO -fix
-                // if (!Object.values(api.Type2).includes(type as api.Type2)) {
-                //     throw new Error("Invalid transport type")
-                // }
-
-                if (!name) {
-                    throw new Error("Invalid name")
-                }
-
-                if (!address) {
-                    throw new Error("Invalid address")
-                }
-
-                if (!port) {
-                    throw new Error("Invalid port")
-                }
-
-                if (!validateEmail(username as string)) {
-                    throw new Error("Invalid username")
-                }
-
-                if (!validatePassword(password as string)) {
-                    throw new Error("Invalid password format")
-                }
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Transports)`)
-            }
-
-            mapTransportNameToTransportId.set(name, name)
-
-            transportsData.push({
-                type,
-                name,
-                address,
-                port,
-                username,
-                password
-            })
-        }
-    })
-
-    const configurationWorksheet = workbook.getWorksheet("Configurations")
-    const configurationsData: any[] = []
-
-    configurationWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const name = row.getCell(1).value?.toString().trim()
-            const exportDataTemplateName = row.getCell(2).value?.toString().trim()
-            const transportName = row.getCell(3).value?.toString().trim()
-            const groupName = row.getCell(4).value?.toString().trim()
-            const preset = row.getCell(5).value?.toString().trim()
-
-            try {
-                if (!name) {
-                    throw new Error("Invalid name")
-                }
-
-                if (!mapExportDataTemplateNameToExportDataTemplateId.get(exportDataTemplateName)) {
-                    throw new Error("ExportDataTemplateName is not defined in the previous worksheet")
-                }
-
-                if (!mapTransportNameToTransportId.get(transportName)) {
-                    throw new Error("TransportName is not defined in the previous worksheet")
-                }
-
-                if (!mapGroupNameToGroupId.get(groupName)) {
-                    throw new Error("GroupName is not defined in the previous worksheet")
-                }
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Configurations)`)
-            }
-
-            configurationsData.push({
-                name,
-                exportDataTemplateName,
-                transportName,
-                groupName,
-                preset
-            })
-        }
-    })
-
-    const settingsWorksheet = workbook.getWorksheet("Settings")
-    const settingsData: any[] = []
-
-    settingsWorksheet?.eachRow({ includeEmpty: false }, function (row: any, rowNumber: number) {
-        if (rowNumber > 1) {
-            const key = row.getCell(1).value?.toString().trim()
-            const value = row.getCell(2).value?.toString().trim()
-            const groupName = row.getCell(3).value?.toString().trim()
-
-            try {
-                if (!key) {
-                    throw new Error("Invalid key")
-                }
-
-                if (!value) {
-                    throw new Error("Invalid value")
-                }
-
-                if (!mapGroupNameToGroupId.get(groupName)) {
-                    throw new Error("GroupName is not defined in the previous worksheet")
-                }
-            } catch (err: any) {
-                throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Settings)`)
-            }
-
-            settingsData.push({
-                key,
-                value,
-                groupName
-            })
-        }
-    })
-
-    return {
-      settingsData,
-      configurationsData,
-      transportsData,
-      exportDataTemplatesData,
-      schemasData,
-      addressesData,
-      companyRegistrationsData,
-      usersData,
-      groupsData
-    }
+    return jsonData;
 }
