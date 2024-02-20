@@ -9,6 +9,7 @@ export interface User {
     position: string;
     language: string;
     password: string;
+    sendEmail: boolean;
 }
 
 export interface CompanyRegistrationNumber {

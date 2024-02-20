@@ -33,7 +33,8 @@ const worksheetNameToColumns: { [key: string]: string[] } = {
         'Last Name',
         'Position',
         'Language',
-        'Password'
+        'Password',
+        'Send Email',
     ],
 }
 

@@ -197,6 +197,7 @@ function parseUsersWorksheet(workbook: Workbook, groupsName: string[]): any[] {
             const position = row.getCell(7).value?.toString().trim()
             const language = row.getCell(8).value?.toString().trim()
             const password = row.getCell(9).value?.toString().trim()
+            const sendEmail = row.getCell(10).value?.toString().trim()
 
             try {
                 if (!validateEmail(email)) {
@@ -239,6 +240,10 @@ function parseUsersWorksheet(workbook: Workbook, groupsName: string[]): any[] {
                     throw new Error("Invalid password format")
                 }
 
+                if (!['oui', 'non'].includes(sendEmail as string)) {
+                    throw new Error("Invalid value for sendEmail expected 'oui' or 'non'")
+                }
+
             } catch (err) {
                 throw new Error(`${err} at rows number: ${rowNumber} (Worksheeet: Users)`)
             }
@@ -252,7 +257,8 @@ function parseUsersWorksheet(workbook: Workbook, groupsName: string[]): any[] {
                 lastName,
                 position,
                 language,
-                password
+                password,
+                sendEmail: sendEmail === "oui" ? true : false
             })
         }
     })
